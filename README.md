@@ -395,7 +395,7 @@ Dieses Script darf verwendet, aber nicht ohne Erlaubnis weiterverkauft oder re-u
 ## 👨‍💻 Credits
 
 **Entwickelt von:** HM Scripts  
-**Unterstützung:** Claude (Anthropic)  
+**Unterstützung:** KI 
 **UI Design:** Custom Design System  
 
 **Besonderer Dank an:**
