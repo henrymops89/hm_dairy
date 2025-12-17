@@ -365,7 +365,7 @@ SOFTWARE.
 
 ## 🌟 Credits
 
-- **Entwickler:** Dein Name
+- **Entwickler:** HenryMops
 - **ox_lib:** [overextended](https://github.com/overextended)
 - **Inspiration:** FiveM Community
 
