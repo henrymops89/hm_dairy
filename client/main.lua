@@ -1,299 +1,175 @@
--- ═══════════════════════════════════════════════════════════════
--- HM DAIRY SYSTEM - CLIENT (SUPER SIMPLE VERSION)
--- ═══════════════════════════════════════════════════════════════
+-- client/main.lua
+-- HM Dairy UI - Mit Single-Cow Support
 
-local spawnedCows = {}
-local isPlayerLoaded = false
+local DEBUG = Config.Debug
+local currentCowEntity = nil
 
--- ═══════════════════════════════════════════════════════════════
--- COW SPAWNING SYSTEM
--- ═══════════════════════════════════════════════════════════════
-
-local function SpawnCow(index, location)
-    if spawnedCows[index] then return end
-    
-    lib.requestModel(Config.CowSpawns.Model, 10000)
-    
-    local coords = location.coords.xyz
-    local heading = location.coords.w
-    
-    local cow = CreatePed(28, GetHashKey(Config.CowSpawns.Model), coords.x, coords.y, coords.z, heading, false, true)
-    
-    SetEntityAsMissionEntity(cow, true, true)
-    SetPedFleeAttributes(cow, 0, false)
-    SetPedCombatAttributes(cow, 17, true)
-    SetBlockingOfNonTemporaryEvents(cow, true)
-    SetPedCanRagdollFromPlayerImpact(cow, false)
-    SetPedCanRagdoll(cow, false)
-    
-    if location.scenario then
-        TaskStartScenarioInPlace(cow, location.scenario, 0, true)
-    end
-    
-    FreezeEntityPosition(cow, true)
-    
-    spawnedCows[index] = {
-        entity = cow,
-        index = index,
-        coords = coords
-    }
-    
-    exports.ox_target:addLocalEntity(cow, {
-        {
-            name = 'hm_dairy_milk_cow_' .. index,
-            icon = Config.Target.Icon,
-            label = Config.Target.Label,
-            distance = Config.Target.Distance,
-            onSelect = function(data)
-                MilkCow(index)
-            end
-        }
-    })
-    
-    if Config.Debug then
-        print('^2[HM Dairy] Spawned cow #' .. index .. ' at ' .. coords .. '^0')
+local function DebugPrint(msg)
+    if DEBUG then
+        print('[HM Dairy Client] ' .. msg)
     end
 end
 
-local function DeleteCow(index)
-    if not spawnedCows[index] then return end
-    
-    local cow = spawnedCows[index].entity
-    
-    if DoesEntityExist(cow) then
-        exports.ox_target:removeLocalEntity(cow, 'hm_dairy_milk_cow_' .. index)
-        DeleteEntity(cow)
-    end
-    
-    if Config.Debug then
-        print('^3[HM Dairy] Deleted cow #' .. index .. '^0')
-    end
-    
-    spawnedCows[index] = nil
-end
+-- ============================================
+-- EVENT HANDLERS FÜR UI
+-- ============================================
 
-local function ManageCowSpawns()
-    if not Config.CowSpawns.Enabled or not isPlayerLoaded then return end
+-- Event: UI öffnen mit Kuh-Daten vom Server
+RegisterNetEvent('hm_dairy:client:openUI', function(cow)
+    DebugPrint('Öffne UI für Kuh')
+    -- Wandle einzelne Kuh in Array um (UI erwartet Array)
+    local cows = cow and {cow} or {}
+    OpenDairyUI(cows)
+end)
+
+-- Event: Notification anzeigen
+RegisterNetEvent('hm_dairy:client:showNotification', function(message)
+    DebugPrint('Notification: ' .. message)
+    ShowDairyNotification(message)
+end)
+
+-- Event: Melken starten (wird von UI getriggert über NUI Callback)
+RegisterNetEvent('hm_dairy:client:startMilking', function(cowId)
+    DebugPrint('Starte Melken für Kuh #' .. cowId)
     
-    local playerCoords = GetEntityCoords(cache.ped)
+    -- UI schließen
+    CloseDairyUI()
     
-    for index, location in ipairs(Config.CowSpawns.Locations) do
-        local coords = location.coords.xyz
-        local distance = #(playerCoords - coords)
+    -- Items checken (wenn aktiviert)
+    if Config.Milking.RequireItems then
+        local hasItems = exports.ox_inventory:Search('count', {
+            Config.Milking.RequiredItems.bucket,
+            Config.Milking.RequiredItems.stool
+        })
         
-        if distance < Config.CowSpawns.SpawnDistance then
-            if not spawnedCows[index] then
-                SpawnCow(index, location)
-            end
-        elseif distance > Config.CowSpawns.DeleteDistance then
-            if spawnedCows[index] then
-                DeleteCow(index)
-            end
-        end
-    end
-end
-
--- ═══════════════════════════════════════════════════════════════
--- MILKING FUNCTION (SUPER SIMPLE - NO BULLSHIT!)
--- ═══════════════════════════════════════════════════════════════
-
-function MilkCow(cowIndex)
-    if Config.Debug then
-        print('^3[HM Dairy] === SUPER SIMPLE VERSION ===^0')
-        print('^3[HM Dairy] Kuh #' .. cowIndex .. ' angeklickt^0')
-    end
-    
-    -- Server check
-    lib.callback('hm_dairy:server:canMilkCow', false, function(canMilk, reason, data)
-        if not canMilk then
-            local message = Config.Notifications.Error[reason]
-            if reason == 'cooldown' then
-                message = message:format(data)
-            end
-            Framework.Notify(message, 'error')
+        if not hasItems or 
+           hasItems[Config.Milking.RequiredItems.bucket] < 1 or 
+           hasItems[Config.Milking.RequiredItems.stool] < 1 then
+            ShowDairyNotification('Fehlende Items: Melkeimer & Melkschemel!')
             return
         end
-        
-        -- EINFACH NUR PROGRESS BAR - NICHTS SONST!
-        if Config.Debug then
-            print('^3[HM Dairy] Starte Progress Bar...^0')
-        end
-        
-        -- Animation starten (falls konfiguriert)
-        local ped = cache.ped
-        if Config.Milking.Animation.dict and Config.Milking.Animation.dict ~= '' then
-            lib.requestAnimDict(Config.Milking.Animation.dict, 3000)
-            TaskPlayAnim(ped, Config.Milking.Animation.dict, Config.Milking.Animation.clip, 8.0, -8.0, -1, 1, 0, false, false, false)
-            
-            if Config.Debug then
-                print('^2[HM Dairy] Animation gestartet: ' .. Config.Milking.Animation.dict .. '^0')
-            end
-        end
-        
-        local success = lib.progressBar({
-            duration = Config.Milking.Duration,
-            label = Config.Notifications.Info.milking,
-            useWhileDead = false,
-            canCancel = true,
-            disable = {
-                move = true,
-                car = true,
-                combat = true
+    end
+    
+    -- Checke ob Kuh noch existiert und in Reichweite ist
+    if not currentCowEntity or not DoesEntityExist(currentCowEntity) then
+        ShowDairyNotification('Kuh nicht gefunden!')
+        return
+    end
+    
+    local playerCoords = GetEntityCoords(PlayerPedId())
+    local cowCoords = GetEntityCoords(currentCowEntity)
+    local distance = #(playerCoords - cowCoords)
+    
+    if distance > Config.UI.MaxDistance then
+        ShowDairyNotification('Du bist zu weit von der Kuh entfernt!')
+        return
+    end
+    
+    -- Progress Bar starten
+    local playerPed = PlayerPedId()
+    
+    if lib.progressCircle({
+        duration = Config.Milking.Duration,
+        position = 'bottom',
+        label = 'Kuh wird gemolken...',
+        useWhileDead = false,
+        canCancel = true,
+        disable = {
+            move = true,
+            car = true,
+            combat = true
+        },
+        anim = {
+            dict = Config.Milking.Animation.dict,
+            clip = Config.Milking.Animation.clip
+        }
+    }) then
+        -- Erfolgreich gemolken - Server benachrichtigen
+        DebugPrint('Melken erfolgreich - Benachrichtige Server')
+        TriggerServerEvent('hm_dairy:server:milkCow', cowId)
+    else
+        -- Abgebrochen
+        DebugPrint('Melken abgebrochen')
+        ShowDairyNotification('Melken abgebrochen!')
+    end
+    
+    -- Reset
+    currentCowEntity = nil
+end)
+
+-- ============================================
+-- OX_TARGET INTEGRATION
+-- ============================================
+
+if Config.Target.Enabled then
+    CreateThread(function()
+        exports.ox_target:addModel(Config.CowSpawns.Model, {
+            {
+                name = 'hm_dairy_open_ui',
+                label = Config.Target.Label,
+                icon = Config.Target.Icon,
+                distance = Config.Target.Distance,
+                onSelect = function(data)
+                    local entity = data.entity
+                    
+                    if not entity or not DoesEntityExist(entity) then
+                        DebugPrint('Keine gültige Entity!')
+                        return
+                    end
+                    
+                    -- Finde Kuh-Index
+                    local cowIndex = exports.hm_dairy:GetCowIndexFromEntity(entity)
+                    
+                    if not cowIndex then
+                        DebugPrint('Kuh-Index nicht gefunden!')
+                        ShowDairyNotification('Diese Kuh ist nicht registriert!')
+                        return
+                    end
+                    
+                    DebugPrint('ox_target: Öffne UI für Kuh #' .. cowIndex)
+                    
+                    -- Speichere aktuelle Kuh-Entity
+                    currentCowEntity = entity
+                    
+                    -- Server fragen nach Daten für DIESE Kuh
+                    TriggerServerEvent('hm_dairy:server:openUI', cowIndex)
+                end
             }
         })
         
-        -- Animation stoppen
-        ClearPedTasks(ped)
-        
-        if Config.Debug then
-            print('^3[HM Dairy] Progress Bar result: ' .. tostring(success) .. '^0')
-        end
-        
-        if success then
-            TriggerServerEvent('hm_dairy:server:processMilking', cowIndex)
-        else
-            Framework.Notify(Config.Notifications.Error.cancelled, 'error')
-        end
-    end, cowIndex)
-end
-
--- ═══════════════════════════════════════════════════════════════
--- SPAWN MANAGEMENT THREAD
--- ═══════════════════════════════════════════════════════════════
-
-CreateThread(function()
-    while true do
-        ManageCowSpawns()
-        Wait(1000)
-    end
-end)
-
--- ═══════════════════════════════════════════════════════════════
--- PLAYER LOAD/UNLOAD
--- ═══════════════════════════════════════════════════════════════
-
-local farmBlip = nil
-
--- Create farm blip
-local function CreateFarmBlip()
-    if not Config.Blip.Enabled then return end
-    
-    farmBlip = AddBlipForCoord(Config.Blip.Coords.x, Config.Blip.Coords.y, Config.Blip.Coords.z)
-    SetBlipSprite(farmBlip, Config.Blip.Sprite)
-    SetBlipDisplay(farmBlip, 4)
-    SetBlipScale(farmBlip, Config.Blip.Scale)
-    SetBlipColour(farmBlip, Config.Blip.Color)
-    SetBlipAsShortRange(farmBlip, true)
-    BeginTextCommandSetBlipName("STRING")
-    AddTextComponentString(Config.Blip.Name)
-    EndTextCommandSetBlipName(farmBlip)
-    
-    if Config.Debug then
-        print('^2[HM Dairy] Farm blip created^0')
-    end
-end
-
-AddEventHandler('onResourceStart', function(resource)
-    if resource == GetCurrentResourceName() then
-        Wait(1000)
-        isPlayerLoaded = true
-        CreateFarmBlip()
-        
-        if Config.Debug then
-            print('^2[HM Dairy] Resource started - Player loaded^0')
-        end
-    end
-end)
-
-AddEventHandler('onResourceStop', function(resource)
-    if resource == GetCurrentResourceName() then
-        for index, _ in pairs(spawnedCows) do
-            DeleteCow(index)
-        end
-        
-        if farmBlip then
-            RemoveBlip(farmBlip)
-        end
-        
-        if Config.Debug then
-            print('^3[HM Dairy] Resource stopped - Cleaned up cows^0')
-        end
-    end
-end)
-
--- Framework-specific player load events
-if Config.Framework == 'qbox' or Config.Framework == 'qbcore' then
-    RegisterNetEvent('QBCore:Client:OnPlayerLoaded', function()
-        isPlayerLoaded = true
-        CreateFarmBlip()
-        if Config.Debug then
-            print('^2[HM Dairy] Player loaded (QBCore/QBox)^0')
-        end
-    end)
-    
-    RegisterNetEvent('QBCore:Client:OnPlayerUnload', function()
-        isPlayerLoaded = false
-        for index, _ in pairs(spawnedCows) do
-            DeleteCow(index)
-        end
-        if farmBlip then
-            RemoveBlip(farmBlip)
-            farmBlip = nil
-        end
-        if Config.Debug then
-            print('^3[HM Dairy] Player unloaded - Cleaned up cows^0')
-        end
-    end)
-    
-elseif Config.Framework == 'esx' then
-    RegisterNetEvent('esx:playerLoaded', function()
-        isPlayerLoaded = true
-        CreateFarmBlip()
-        if Config.Debug then
-            print('^2[HM Dairy] Player loaded (ESX)^0')
-        end
-    end)
-    
-    RegisterNetEvent('esx:onPlayerLogout', function()
-        isPlayerLoaded = false
-        for index, _ in pairs(spawnedCows) do
-            DeleteCow(index)
-        end
-        if farmBlip then
-            RemoveBlip(farmBlip)
-            farmBlip = nil
-        end
-        if Config.Debug then
-            print('^3[HM Dairy] Player unloaded - Cleaned up cows^0')
-        end
+        DebugPrint('ox_target für Kühe registriert')
     end)
 end
 
--- ═══════════════════════════════════════════════════════════════
--- DEBUG COMMANDS
--- ═══════════════════════════════════════════════════════════════
+-- ============================================
+-- COMMANDS (für Testing)
+-- ============================================
 
-if Config.Debug then
-    RegisterCommand('dairy_spawncows', function()
-        for index, location in ipairs(Config.CowSpawns.Locations) do
-            SpawnCow(index, location)
-        end
-        print('^2[HM Dairy] Spawned all cows^0')
-    end, false)
-    
-    RegisterCommand('dairy_deletecows', function()
-        for index, _ in pairs(spawnedCows) do
-            DeleteCow(index)
-        end
-        print('^3[HM Dairy] Deleted all cows^0')
-    end, false)
-    
-    RegisterCommand('dairy_listcows', function()
-        local count = 0
-        for _ in pairs(spawnedCows) do count = count + 1 end
-        print('^3[HM Dairy] Spawned cows: ' .. count .. '^0')
-        for index, data in pairs(spawnedCows) do
-            print('^3  - Cow #' .. index .. ' (Index: ' .. data.index .. ') at ' .. data.coords .. '^0')
-        end
+-- Command: UI direkt öffnen (alle Kühe) - Nur für Testing!
+if DEBUG then
+    RegisterCommand('dairyui', function()
+        DebugPrint('Command /dairyui ausgeführt (Test-Modus)')
+        TriggerServerEvent('hm_dairy:server:openUI', nil) -- nil = alle Kühe
     end, false)
 end
+
+DebugPrint('Client geladen - Gehe zu einer Kuh und drücke E')
+DebugPrint('Setze Config.Debug = false wenn alles funktioniert')
+
+-- TEST COMMAND: Blip manuell erstellen
+RegisterCommand('testblip', function()
+    local blip = AddBlipForCoord(Config.Blip.Coords.x, Config.Blip.Coords.y, Config.Blip.Coords.z)
+    
+    SetBlipSprite(blip, Config.Blip.Sprite)
+    SetBlipDisplay(blip, 4)
+    SetBlipScale(blip, Config.Blip.Scale)
+    SetBlipColour(blip, Config.Blip.Color)
+    SetBlipAsShortRange(blip, true)
+    
+    BeginTextCommandSetBlipName('STRING')
+    AddTextComponentSubstringPlayerName(Config.Blip.Name)
+    EndTextCommandSetBlipName(blip)
+    
+    print('TEST: Blip erstellt bei ' .. Config.Blip.Coords)
+    print('Öffne Map und checke!')
+end)
