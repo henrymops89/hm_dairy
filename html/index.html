@@ -1,0 +1,574 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Milchfarm Manager - HM Dairy</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: transparent;
+            overflow: hidden;
+            display: none;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        body.show {
+            display: flex;
+        }
+
+        #app {
+            width: 100%;
+            max-width: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .container {
+            background: linear-gradient(145deg, #8B4513 0%, #654321 100%);
+            border: 5px solid #5D3A1A;
+            border-radius: 20px;
+            width: 100%;
+            max-width: 900px;
+            padding: 30px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5),
+                        inset 0 1px 0 rgba(255, 255, 255, 0.1);
+            animation: slideUp 0.4s ease;
+            position: relative;
+            overflow: hidden;
+            transition: all 0.5s ease;
+        }
+
+        .container.dark {
+            background: linear-gradient(145deg, #1a1a1a 0%, #0d0d0d 100%);
+            border-color: #2a2a2a;
+        }
+
+        @keyframes slideUp {
+            from { 
+                transform: translateY(30px);
+                opacity: 0;
+            }
+            to { 
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        .container::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, #D4AF37, #F4E4C1, #D4AF37);
+            transition: background 0.5s ease;
+        }
+
+        .container.dark::before {
+            background: linear-gradient(90deg, #4a9eff, #7b68ee, #4a9eff);
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 3px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .header h1 {
+            color: #F4E4C1;
+            font-size: 32px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+            margin-bottom: 5px;
+            font-weight: 700;
+            transition: color 0.5s ease;
+        }
+
+        .container.dark .header h1 {
+            color: #7b68ee;
+        }
+
+        .header p {
+            color: #D4AF37;
+            font-size: 14px;
+            margin-top: 5px;
+            opacity: 0.9;
+            transition: color 0.5s ease;
+        }
+
+        .container.dark .header p {
+            color: #4a9eff;
+        }
+
+        .theme-toggle {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: rgba(255, 255, 255, 0.2);
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            color: #F4E4C1;
+            width: 45px;
+            height: 45px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 22px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+        }
+
+        .theme-toggle:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: scale(1.1);
+        }
+
+        .close-btn {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(220, 53, 69, 0.8);
+            border: 2px solid #c82333;
+            color: white;
+            width: 35px;
+            height: 35px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+        }
+
+        .close-btn:hover {
+            background: #c82333;
+            transform: rotate(90deg) scale(1.1);
+        }
+
+        .cows-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .cow-card {
+            background: linear-gradient(135deg, #F4E4C1 0%, #E8D4A8 100%);
+            border: 3px solid #D4AF37;
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+            position: relative;
+            overflow: hidden;
+            transition: all 0.5s ease;
+        }
+
+        .container.dark .cow-card {
+            background: linear-gradient(135deg, #2a2a2a 0%, #1a1a1a 100%);
+            border-color: #4a9eff;
+        }
+
+        .cow-icon {
+            font-size: 48px;
+            text-align: center;
+            margin-bottom: 10px;
+        }
+
+        .cow-name {
+            color: #654321;
+            font-size: 18px;
+            font-weight: 700;
+            margin-bottom: 15px;
+            text-align: center;
+            transition: color 0.5s ease;
+        }
+
+        .container.dark .cow-name {
+            color: #7b68ee;
+        }
+
+        .cow-details {
+            background: rgba(139, 69, 19, 0.1);
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 15px;
+            transition: background 0.5s ease;
+        }
+
+        .container.dark .cow-details {
+            background: rgba(74, 158, 255, 0.1);
+        }
+
+        .cow-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            color: #654321;
+            font-size: 14px;
+            margin: 8px 0;
+            padding: 5px 0;
+            transition: color 0.5s ease;
+        }
+
+        .container.dark .cow-row {
+            color: #b8b8b8;
+        }
+
+        .cow-row:not(:last-child) {
+            border-bottom: 1px solid rgba(139, 69, 19, 0.2);
+            transition: border-color 0.5s ease;
+        }
+
+        .container.dark .cow-row:not(:last-child) {
+            border-bottom-color: rgba(74, 158, 255, 0.2);
+        }
+
+        .cow-label {
+            font-weight: 600;
+        }
+
+        .cow-arrow {
+            color: #8B4513;
+            font-size: 20px;
+            text-align: center;
+            margin: 10px 0;
+            transition: color 0.5s ease;
+        }
+
+        .container.dark .cow-arrow {
+            color: #4a9eff;
+        }
+
+        .milk-btn {
+            width: 100%;
+            padding: 12px;
+            background: linear-gradient(135deg, #28a745 0%, #218838 100%);
+            border: 2px solid #1e7e34;
+            color: white;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .milk-btn:hover {
+            background: linear-gradient(135deg, #218838 0%, #1e7e34 100%);
+            transform: scale(1.02);
+            box-shadow: 0 6px 15px rgba(0, 0, 0, 0.3);
+        }
+
+        .milk-btn:active {
+            transform: scale(0.98);
+        }
+
+        .milk-btn:disabled {
+            background: linear-gradient(135deg, #6c757d 0%, #5a6268 100%);
+            border-color: #545b62;
+            cursor: not-allowed;
+            opacity: 0.6;
+        }
+
+        .milk-btn:disabled:hover {
+            transform: none;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+        }
+
+        .status-badge {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+            transition: all 0.5s ease;
+        }
+
+        .status-badge.ready {
+            background: rgba(40, 167, 69, 0.9);
+            color: white;
+        }
+
+        .status-badge.cooldown {
+            background: rgba(139, 69, 19, 0.9);
+            color: #F4E4C1;
+        }
+
+        .container.dark .status-badge.cooldown {
+            background: rgba(74, 158, 255, 0.9);
+            color: #ffffff;
+        }
+
+        .production-bar {
+            width: 100%;
+            height: 8px;
+            background: rgba(139, 69, 19, 0.2);
+            border-radius: 4px;
+            overflow: hidden;
+            margin-top: 10px;
+            transition: background 0.5s ease;
+        }
+
+        .container.dark .production-bar {
+            background: rgba(74, 158, 255, 0.2);
+        }
+
+        .production-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #28a745, #20c997);
+            border-radius: 4px;
+            transition: width 0.5s ease;
+        }
+
+        .notification {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            background: linear-gradient(135deg, #28a745 0%, #218838 100%);
+            color: white;
+            padding: 15px 25px;
+            border-radius: 10px;
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.3);
+            font-weight: 600;
+            display: none;
+            animation: slideIn 0.3s ease;
+            z-index: 1000;
+        }
+
+        .notification.show {
+            display: block;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(400px);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        @media (max-width: 768px) {
+            body {
+                padding: 10px;
+            }
+
+            .container {
+                padding: 20px;
+            }
+
+            .cows-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .header h1 {
+                font-size: 24px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <div class="container" id="container">
+            <button class="theme-toggle" id="themeToggle" onclick="toggleTheme()">☀️</button>
+            <button class="close-btn" onclick="closeUI()">✕</button>
+            
+            <div class="header">
+                <h1>🐄 Milchfarm Manager 🐄</h1>
+                <p>Wähle eine Kuh zum Melken</p>
+            </div>
+
+            <div class="cows-grid" id="cowsContainer"></div>
+        </div>
+    </div>
+
+    <div class="notification" id="notification"></div>
+
+    <script>
+        let isDark = false;
+        let cows = [];
+        
+        // Get resource name at startup (FIXED - no recursion!)
+        const resourceName = (function() {
+            try {
+                // In FiveM NUI, there's a global GetParentResourceName function
+                if (typeof GetParentResourceName === 'function') {
+                    return GetParentResourceName();
+                }
+            } catch(e) {
+                console.log('[HM Dairy] Not in FiveM context, using fallback');
+            }
+            return 'hm_dairy';
+        })();
+        
+        console.log('[HM Dairy] Resource name:', resourceName);
+
+        // NUI Message Listener
+        window.addEventListener('message', function(event) {
+            const data = event.data;
+            
+            console.log('[HM Dairy] Received message:', data.action);
+            
+            if (data.action === 'openUI') {
+                console.log('[HM Dairy] Opening UI with', data.cows ? data.cows.length : 0, 'cows');
+                document.body.classList.add('show');
+                if (data.cows) {
+                    cows = data.cows;
+                    renderCows();
+                }
+            } else if (data.action === 'closeUI') {
+                console.log('[HM Dairy] Closing UI');
+                document.body.classList.remove('show');
+            } else if (data.action === 'updateCows') {
+                console.log('[HM Dairy] Updating cows');
+                if (data.cows) {
+                    cows = data.cows;
+                    renderCows();
+                }
+            } else if (data.action === 'showNotification') {
+                console.log('[HM Dairy] Showing notification:', data.message);
+                showNotification(data.message);
+            }
+        });
+
+        // ESC Key to close
+        document.addEventListener('keydown', function(event) {
+            if (event.key === 'Escape') {
+                console.log('[HM Dairy] ESC pressed in HTML');
+                closeUI();
+            }
+        });
+
+        function toggleTheme() {
+            isDark = !isDark;
+            const container = document.getElementById('container');
+            const themeToggle = document.getElementById('themeToggle');
+            
+            if (isDark) {
+                container.classList.add('dark');
+                themeToggle.textContent = '🌙';
+            } else {
+                container.classList.remove('dark');
+                themeToggle.textContent = '☀️';
+            }
+        }
+
+        function renderCows() {
+            const container = document.getElementById('cowsContainer');
+            container.innerHTML = '';
+
+            cows.forEach(cow => {
+                const card = document.createElement('div');
+                card.className = 'cow-card';
+                
+                const statusText = cow.canMilk ? '✓ Bereit' : `⏱ ${Math.floor(cow.cooldownRemaining / 60)}m`;
+                const statusClass = cow.canMilk ? 'ready' : 'cooldown';
+                const buttonText = cow.canMilk ? 'Melken' : `Cooldown: ${Math.floor(cow.cooldownRemaining / 60)}m`;
+                const buttonDisabled = !cow.canMilk ? 'disabled' : '';
+                
+                card.innerHTML = `
+                    <span class="status-badge ${statusClass}">${statusText}</span>
+                    <div class="cow-icon">🐄</div>
+                    <div class="cow-name">${cow.name || 'Kuh #' + cow.id}</div>
+                    <div class="cow-details">
+                        <div class="cow-row">
+                            <span class="cow-label">Benötigt:</span>
+                            <span>1x Melkeimer 🪣</span>
+                        </div>
+                        <div class="cow-row">
+                            <span></span>
+                            <span>1x Melkschemel 🪑</span>
+                        </div>
+                        <div class="cow-arrow">⬇</div>
+                        <div class="cow-row">
+                            <span class="cow-label">Ergebnis:</span>
+                            <span>1x Rohmilch 🥛</span>
+                        </div>
+                        <div class="cow-row">
+                            <span class="cow-label">Produktion:</span>
+                            <span>${cow.production || 85}%</span>
+                        </div>
+                        <div class="production-bar">
+                            <div class="production-fill" style="width: ${cow.production || 85}%"></div>
+                        </div>
+                    </div>
+                    <button class="milk-btn" onclick="startMilking(${cow.id})" ${buttonDisabled}>
+                        ${buttonText}
+                    </button>
+                `;
+                
+                container.appendChild(card);
+            });
+        }
+
+        function startMilking(cowId) {
+            console.log('[HM Dairy] Starting to milk cow:', cowId);
+            
+            // Send to FiveM client
+            fetch(`https://${resourceName}/startMilking`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    cowId: cowId
+                })
+            }).then(response => {
+                console.log('[HM Dairy] Milk request sent successfully');
+            }).catch(error => {
+                console.error('[HM Dairy] Error sending milk request:', error);
+            });
+        }
+
+        function closeUI() {
+            console.log('[HM Dairy] closeUI() called from HTML');
+            document.body.classList.remove('show');
+            
+            // Notify FiveM that UI is closed
+            fetch(`https://${resourceName}/closeUI`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({})
+            }).then(response => {
+                console.log('[HM Dairy] Close request sent successfully');
+            }).catch(error => {
+                console.error('[HM Dairy] Error sending close request:', error);
+            });
+        }
+
+        function showNotification(message) {
+            const notification = document.getElementById('notification');
+            notification.textContent = message;
+            notification.classList.add('show');
+            
+            setTimeout(() => {
+                notification.classList.remove('show');
+            }, 3000);
+        }
+    </script>
+</body>
+</html>
