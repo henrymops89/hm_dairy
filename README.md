@@ -395,7 +395,6 @@ Dieses Script darf verwendet, aber nicht ohne Erlaubnis weiterverkauft oder re-u
 ## 👨‍💻 Credits
 
 **Entwickelt von:** HM Scripts  
-**Unterstützung:** KI 
 **UI Design:** Custom Design System  
 
 **Besonderer Dank an:**
