@@ -1,6 +1,6 @@
 Config = {}
 
--- Debug Modus (setzt auf false für Production)
+-- Debug Modus (setze auf false für Production)
 Config.Debug = true
 
 -- ============================================
@@ -63,7 +63,38 @@ Config.Milking = {
 
 Config.UI = {
     ShowAllCows = false,                -- true = Alle Kühe in UI, false = Nur die eine Kuh
-    MaxDistance = 3.0,                  -- Max Distanz zur Kuh für UI
+    MaxDistance = 3.0,                  -- Max Distanz zur Kuh für UI & Melken (SECURITY!)
+}
+
+-- ============================================
+-- SECURITY SETTINGS (NEW!)
+-- ============================================
+
+Config.Security = {
+    -- Rate Limiting
+    RateLimit = {
+        Enabled = true,
+        MaxActions = 10,                -- Max 10 UI Opens per TimeWindow
+        TimeWindow = 60                 -- In Sekunden
+    },
+    
+    -- Action Cooldown
+    ActionCooldown = {
+        Enabled = true,
+        Seconds = 5                     -- 5 Sekunden zwischen Melk-Versuchen
+    },
+    
+    -- Distance Check
+    DistanceCheck = {
+        Enabled = true,
+        MaxDistance = 3.0               -- Max 3m von Kuh entfernt (uses Config.UI.MaxDistance)
+    },
+    
+    -- Cow Validation
+    ValidateCowIndex = true,            -- Prüfe ob cowIndex gültig ist
+    
+    -- Player Validation
+    ValidatePlayer = true,              -- Prüfe ob Spieler existiert & am Leben ist
 }
 
 -- ============================================
