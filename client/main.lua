@@ -98,16 +98,19 @@ RegisterNetEvent('hm_dairy:client:startMilking', function(cowId)
 end)
 
 -- ============================================
--- OX_TARGET INTEGRATION
+-- TARGET INTEGRATION (ox_target / qb-target)
 -- ============================================
 
 if Config.Target.Enabled then
     CreateThread(function()
-        exports.ox_target:addModel(Config.CowSpawns.Model, {
-            {
-                name = 'hm_dairy_open_ui',
-                label = Config.Target.Label,
-                icon = Config.Target.Icon,
+        local options = {}
+        
+        -- MELKEN
+        if Config.Target.Options.milk and Config.Target.Options.milk.enabled then
+            table.insert(options, {
+                name = 'hm_dairy_milk',
+                label = Config.Target.Options.milk.label,
+                icon = Config.Target.Options.milk.icon,
                 distance = Config.Target.Distance,
                 onSelect = function(data)
                     local entity = data.entity
@@ -122,11 +125,11 @@ if Config.Target.Enabled then
                     
                     if not cowIndex then
                         DebugPrint('Kuh-Index nicht gefunden!')
-                        ShowDairyNotification('Diese Kuh ist nicht registriert!')
+                        Framework.Notify('Diese Kuh ist nicht registriert!', 'error')
                         return
                     end
                     
-                    DebugPrint('ox_target: Öffne UI für Kuh #' .. cowIndex)
+                    DebugPrint('Target: Öffne UI für Kuh #' .. cowIndex)
                     
                     -- Speichere aktuelle Kuh-Entity
                     currentCowEntity = entity
@@ -134,13 +137,79 @@ if Config.Target.Enabled then
                     -- Server fragen nach Daten für DIESE Kuh
                     TriggerServerEvent('hm_dairy:server:openUI', cowIndex)
                 end
-            }
-        })
+            })
+        end
         
-        DebugPrint('ox_target für Kühe registriert')
+        -- FÜTTERN (Beispiel für zukünftige Features)
+        if Config.Target.Options.feed and Config.Target.Options.feed.enabled then
+            table.insert(options, {
+                name = 'hm_dairy_feed',
+                label = Config.Target.Options.feed.label,
+                icon = Config.Target.Options.feed.icon,
+                distance = Config.Target.Distance,
+                onSelect = function(data)
+                    local cowIndex = exports.hm_dairy:GetCowIndexFromEntity(data.entity)
+                    if cowIndex then
+                        TriggerEvent('hm_dairy:client:feedCow', cowIndex, data.entity)
+                    end
+                end
+            })
+        end
+        
+        -- BÜRSTEN
+        if Config.Target.Options.brush and Config.Target.Options.brush.enabled then
+            table.insert(options, {
+                name = 'hm_dairy_brush',
+                label = Config.Target.Options.brush.label,
+                icon = Config.Target.Options.brush.icon,
+                distance = Config.Target.Distance,
+                onSelect = function(data)
+                    local cowIndex = exports.hm_dairy:GetCowIndexFromEntity(data.entity)
+                    if cowIndex then
+                        TriggerEvent('hm_dairy:client:brushCow', cowIndex, data.entity)
+                    end
+                end
+            })
+        end
+        
+        -- STREICHELN
+        if Config.Target.Options.pet and Config.Target.Options.pet.enabled then
+            table.insert(options, {
+                name = 'hm_dairy_pet',
+                label = Config.Target.Options.pet.label,
+                icon = Config.Target.Options.pet.icon,
+                distance = Config.Target.Distance,
+                onSelect = function(data)
+                    local cowIndex = exports.hm_dairy:GetCowIndexFromEntity(data.entity)
+                    if cowIndex then
+                        TriggerEvent('hm_dairy:client:petCow', cowIndex, data.entity)
+                    end
+                end
+            })
+        end
+        
+        -- TIERARZT
+        if Config.Target.Options.vet and Config.Target.Options.vet.enabled then
+            table.insert(options, {
+                name = 'hm_dairy_vet',
+                label = Config.Target.Options.vet.label,
+                icon = Config.Target.Options.vet.icon,
+                distance = Config.Target.Distance,
+                onSelect = function(data)
+                    local cowIndex = exports.hm_dairy:GetCowIndexFromEntity(data.entity)
+                    if cowIndex then
+                        TriggerEvent('hm_dairy:client:vetCheck', cowIndex, data.entity)
+                    end
+                end
+            })
+        end
+        
+        -- Registriere alle Optionen mit der Target Bridge
+        Target.AddModel(Config.CowSpawns.Model, options)
+        
+        DebugPrint('Target-System (' .. Target.GetSystemName() .. ') mit ' .. #options .. ' Optionen registriert')
     end)
 end
-
 -- ============================================
 -- COMMANDS (für Testing)
 -- ============================================
