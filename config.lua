@@ -26,6 +26,45 @@ Config.CowSpawns = {
 }
 
 -- ============================================
+-- OX_TARGET / QB-TARGET
+-- ============================================
+
+Config.Target = {
+    Enabled = true,
+    System = 'auto',                    -- 'auto', 'ox_target', 'qb-target'
+    Distance = 2.5,
+    
+    -- Target Options
+    Options = {
+        milk = {
+            enabled = true,
+            label = 'Kuh melken',
+            icon = 'fa-solid fa-cow'
+        },
+        feed = {
+            enabled = false,            -- Für V5 Pflege-System
+            label = 'Kuh füttern',
+            icon = 'fa-solid fa-wheat-awn'
+        },
+        brush = {
+            enabled = false,
+            label = 'Kuh bürsten',
+            icon = 'fa-solid fa-brush'
+        },
+        pet = {
+            enabled = false,
+            label = 'Kuh streicheln',
+            icon = 'fa-solid fa-hand'
+        },
+        vet = {
+            enabled = false,
+            label = 'Tierarzt-Check',
+            icon = 'fa-solid fa-user-doctor'
+        }
+    }
+}
+
+-- ============================================
 -- MELK-EINSTELLUNGEN
 -- ============================================
 
